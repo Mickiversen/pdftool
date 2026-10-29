@@ -2,7 +2,7 @@
 # Build the browser version on Vercel (vercel.json `buildCommand`). Output: dist/web.
 #
 # Vercel's build image has no Rust, so this installs rustup with the wasm32 target, and downloads
-# prebuilt trunk and wasm-bindgen (matching the wasm-bindgen version in Cargo.lock) into
+# prebuilt static trunk and wasm-bindgen (matching the wasm-bindgen version in Cargo.lock) into
 # $HOME/.local/bin. Hosting notes: packaging/web/README.md.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -22,7 +22,8 @@ WB_VERSION="$(grep -A1 '^name = "wasm-bindgen"$' "$ROOT/Cargo.lock" | sed -n 's/
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-curl -sSfL "https://github.com/trunk-rs/trunk/releases/download/v$TRUNK_VERSION/trunk-x86_64-unknown-linux-gnu.tar.gz" |
+# The musl builds are static: Vercel's image has glibc 2.34, older than the gnu trunk needs.
+curl -sSfL "https://github.com/trunk-rs/trunk/releases/download/v$TRUNK_VERSION/trunk-x86_64-unknown-linux-musl.tar.gz" |
   tar xz -C "$TMP"
 install "$TMP/trunk" "$BIN/trunk"
 curl -sSfL "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$WB_VERSION/wasm-bindgen-$WB_VERSION-x86_64-unknown-linux-musl.tar.gz" |
