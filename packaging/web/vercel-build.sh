@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the browser version on Vercel (vercel.json `buildCommand`). Output: dist/web.
 #
-# Vercel's build image has no Rust, so this installs rustup with the wasm32 target, and downloads
+# Vercel's build image has no recent Rust, so this installs stable through rustup with the wasm32 target, and downloads
 # prebuilt static trunk and wasm-bindgen (matching the wasm-bindgen version in Cargo.lock) into
 # $HOME/.local/bin. Hosting notes: packaging/web/README.md.
 set -euo pipefail
@@ -13,9 +13,11 @@ export PATH="$HOME/.cargo/bin:$BIN:$PATH"
 
 if ! command -v rustup >/dev/null; then
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
-    sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+    sh -s -- -y --profile minimal --default-toolchain none --no-modify-path
 fi
-rustup target add wasm32-unknown-unknown
+# The image may ship an older Rust than the workspace's rust-version; always build with stable.
+rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown
+export RUSTUP_TOOLCHAIN=stable
 
 WB_VERSION="$(grep -A1 '^name = "wasm-bindgen"$' "$ROOT/Cargo.lock" | sed -n 's/^version = "\(.*\)"$/\1/p')"
 [[ -n "$WB_VERSION" ]] || { echo "error: wasm-bindgen version not found in Cargo.lock" >&2; exit 1; }
